@@ -2,6 +2,7 @@ require 'open-uri'
 require 'nokogiri'
 require 'data_mapper'
 require 'dm-sqlite-adapter'
+require 'pry'
 
 
 ENV['DATABASE_URL'] ||= "sqlite://#{Dir.pwd}/students.db"
@@ -24,19 +25,7 @@ class Student
   property :social, Text
   property :coder_cred, Text
 
-  def self.slugify_students
-    Student.all.each do |student|
-      if student.name
-        student.slugify!
-        puts "Slugified #{student.name} into #{student.slug}"
-      end
-    end
-  end
-
-  def slugify!
-    self.slug = name.downcase.gsub(" ", "-")
-    self.save
-  end
+ 
 
   @@url = 'http://students.flatironschool.com/'
   @@root_doc = Nokogiri::HTML(open(@@url))
@@ -62,16 +51,15 @@ class Student
   def self.new_from_url(url)
     begin
       doc = self.get_page(url)
-      self.create(self.get_text_content(doc))
+      self.create(self.get_content(doc))
     rescue => e 
       puts "new_from_url error because of #{e}"
     end
   end
 
-  def self.get_text_content(doc)
+  def self.get_content(doc)
     content_paths = {
       :name => '#about h1',
-      :image => '#about img',
       :tagline => '#about h2',
       :short => '#about h2 + p',
       :aspirations => '#about h3 + p',
@@ -89,6 +77,7 @@ class Student
     result[:image] ||= get_image_content(doc)
     result[:social] ||= get_social_content(doc)
     result[:coder_cred] ||= get_coder_cred_content(doc)
+    result[:slug] = result[:name].downcase.gsub(" ", "-")
     result
   end
 
@@ -142,3 +131,5 @@ end
 
 DataMapper.finalize
 DataMapper.auto_upgrade!
+
+binding.pry
